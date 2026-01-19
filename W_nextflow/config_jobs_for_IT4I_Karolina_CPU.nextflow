@@ -1,6 +1,6 @@
 process.executor = 'slurm'
 params.cluster_options = '-A FTA-25-62 -p qcpu'
+params.max_pending_jobs = 3
 
 // logs are to be found in 'work' (sub)folder(s) of Nextflow, look for '.command.*' files
 // params.cluster_options = '-A FTA-25-62 -p qcpu  -o /home/xulman/nextflow/slurm_logs/job-%x-%A_%a-%N.out.txt -e /home/xulman/nextflow/slurm_logs/job-%x-%A_%a-%N.err.txt'
-

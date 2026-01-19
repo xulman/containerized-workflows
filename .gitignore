@@ -1,7 +1,13 @@
-.pixi
-pixi.lock
 __pycache__
-
 logs
 
+# vim tmp files
 .*.sw*
+
+# apptainer/singularity
+*.sif
+
+# pixi environments
+pixi.lock
+.pixi/*
+!.pixi/config.toml
