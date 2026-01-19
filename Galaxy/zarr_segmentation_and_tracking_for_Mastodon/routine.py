@@ -11,12 +11,7 @@
 #
 # Note: The intermediate segmentation results will not be saved for now...
 
-from cellpose import models as cp3_models
-from trackastra.model import Trackastra
-
 device = 'cpu'
-seg_model = cp3_models.CellposeModel(model_type='cyto3')
-tra_model = Trackastra.from_pretrained('ctc', device='automatic')
 
 i = nz.from_ngff_zarr('https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0051/180712_H2B_22ss_Courtney1_20180712-163837_p00_c00_preview.zarr/0')
 len(i.images)
@@ -24,7 +19,6 @@ i.images[1].data.shape
 i.images[1].data[10,0,100]
 
 
-# masks,_,_ = seg_model.eval([img], normalize=False, channels=[0,0], do_3D=False)
 def flag_error_and_quit(error_msg):
     print(f"ERROR: {error_msg}")
     # exit(0) -- something that stops the interpreter
@@ -59,4 +53,38 @@ def obtain_lazy_view_from_the_zarr_path(input_path, image_idx, list_of_coords_fo
         flag_error_and_quit(f"after fixing non_tzyx dimensions, tzyx (4) dimensions were supposed to left; instead {len(view.shape)} dimensions are available")
 
     return view
+
+
+def segmentation_and_tracking(view_into_data)
+    """
+    Input (`view_into_data`) must be t,z,y,x even for 2D+t images.
+    Output is that of Trackastra.
+    """
+    from cellpose import models as cp3_models
+    from trackastra.model import Trackastra
+    seg_model = cp3_models.CellposeModel(model_type='cyto3')
+    tra_model = Trackastra.from_pretrained('ctc', device=device)
+
+    do_3D = view_into_data.shape[1] > 1
+    print(f"going to do 3D: {do_3D}")
+
+    all_masks = np.zeros(view_into_data.shape, dtype='uint16')
+
+    for t in range(view_into_data.shape[0]):
+        img = view_into_data[t]
+        masks,_,_ = seg_model.eval([img], channels=[0,0], do_3D=do_3D, normalize=True)
+        print(f"done segmenting frame {t}, input image size was {img.shape}")
+
+        # btw, it is possible to re-use the memory into which the original zarr data landed
+        #img[:] = masks[0,:]
+        all_masks[t] = masks[0]
+
+    # now the view_into_data contains the segmentation
+    print("tracking started...")
+    track_graph = tra_model.track(view_into_data, all_masks, mode="greedy")  # or mode="ilp", or "greedy_nodiv"
+    print("tracking done")
+
+    # Write to cell tracking challenge format
+    ctc_tracks, masks_tracked = graph_to_ctc(track_graph, all_masks, outdir=".")
+
 
