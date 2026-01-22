@@ -11,6 +11,8 @@
 #
 # Note: The intermediate segmentation results will not be saved for now...
 
+import numpy as np
+
 device = 'cpu'
 
 i = nz.from_ngff_zarr('https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0051/180712_H2B_22ss_Courtney1_20180712-163837_p00_c00_preview.zarr/0')
@@ -46,11 +48,20 @@ def obtain_lazy_view_from_the_zarr_path(input_path, image_idx, list_of_coords_fo
             axes_known.append(curr_axis_idx)
         curr_axis_idx += 1
 
+    if len(axes_unknown) != len(list_of_coords_for_non_tzyx_dims):
+        flag_error_and_quit(f"found {len(axes_unknown)} non_tzyx dimensions but different number ({len(list_of_coords_for_non_tzyx_dims)}) of values for them")
+
     axes_permutation = [*axes_unknown, *axes_known]
+    # NB: TODO, would be great to check the order in the 'axes_known' and possibly adjust it...
     view = zarr_image.data.transpose(axes_permutation)[*list_of_coords_for_non_tzyx_dims]
+
+    if 'z' not in zarr_image.dims:
+        # assuming then tyx, thus injecting 'z':
+        view = np.reshape(view, (view.shape[0],1,view.shape[1],view.shape[2]))
+
     if len(view.shape) != 4:
         #ds = [ zarr_image.dims[n] for n in axes_permutation[-4:] ]
-        flag_error_and_quit(f"after fixing non_tzyx dimensions, tzyx (4) dimensions were supposed to left; instead {len(view.shape)} dimensions are available")
+        flag_error_and_quit(f"after fixing non_tzyx dimensions, tzyx (4) dimensions were supposed to be left; instead {len(view.shape)} dimensions are available")
 
     return view
 
@@ -65,8 +76,12 @@ def segmentation_and_tracking(view_into_data)
     seg_model = cp3_models.CellposeModel(model_type='cyto3')
     tra_model = Trackastra.from_pretrained('ctc', device=device)
 
+    # just FYI
     do_3D = view_into_data.shape[1] > 1
-    print(f"going to do 3D: {do_3D}")
+    print(f"seg and tra models initiated, going to do 3D: {do_3D}")
+
+    # TODO: downscale the view in zyx axes
+    # TODO: 'all_masks' will be in the new downscaled size
 
     all_masks = np.zeros(view_into_data.shape, dtype='uint16')
 
@@ -85,6 +100,13 @@ def segmentation_and_tracking(view_into_data)
     print("tracking done")
 
     # Write to cell tracking challenge format
-    ctc_tracks, masks_tracked = graph_to_ctc(track_graph, all_masks, outdir=".")
+    # ctc_tracks, masks_tracked = graph_to_ctc(track_graph, all_masks, outdir=".")
+    # nope^^^^, produces difficult (and heavy) output
+    #
+    # other options? CSV for Mastodon, GEFF that is natively supported with Trackastra's API
+    # let's go for the CSV for Mastodon, it's pretty easy
+
+    # TODO: upscale the coordinates in zyx axes
+    # consuider also tracking_options.start_from_tp to offset the 0-based time coordinate of the 'view_into_data'
 
 
