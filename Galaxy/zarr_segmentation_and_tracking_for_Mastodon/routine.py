@@ -33,14 +33,17 @@ def flag_error_and_quit(error_msg):
     # exit(0) -- something that stops the interpreter
 
 
-def obtain_lazy_view_from_the_zarr_path(input_path, image_idx, list_of_coords_for_non_tzyx_dims):
+def obtain_lazy_view_from_the_zarr_path(input_path, scale_level, list_of_coords_for_non_tzyx_dims):
+    """
+    scale_level = 0 means the finest/highest (spatial) resolution, the "bottom of a pyramid"
+    """
     import ngff_zarr as nz
     zarr_handle = nz.from_ngff_zarr(input_path)
 
-    if image_idx < 0 or image_idx >= len(zarr_handle.images):
-        flag_error_and_quit("image index negative or larger than what the zarr dataset offers")
+    if scale_level < 0 or scale_level >= len(zarr_handle.images):
+        flag_error_and_quit("scale index negative or larger than number(-1) of available resolutions that the zarr dataset offers")
 
-    zarr_image = zarr_handle.images[image_idx]
+    zarr_image = zarr_handle.images[scale_level]
     #zarr_image.data.shape
     #zarr_image.dims
 
@@ -133,12 +136,12 @@ def segmentation_and_tracking(view_into_data, tracking_options = default_trackin
     # consuider also tracking_options.start_from_tp to offset the 0-based time coordinate of the 'view_into_data'
 
 
-def segment_and_track_wrapper(zarr_path: str, list_of_coords_for_non_tzyx_dims: list[int], tracking_options = default_tracking_options):
+def segment_and_track_wrapper(zarr_path: str, scale_level: int, list_of_coords_for_non_tzyx_dims: list[int], tracking_options = default_tracking_options):
     """
     Check the 'default_tracking_options' dictionary to see what all keys are supported.
     It is worthwhile to downscale in x,y,z if the input images are 500+ pixels per dimension.
     """
-    data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, list_of_coords_for_non_tzyx_dims)
+    data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, scale_level, list_of_coords_for_non_tzyx_dims)
     # NB: now the data_view is guaranteed to be order as: tzyx
     #     and it is truly an unmodified view, not scaled, not trimmed
     #
@@ -157,5 +160,5 @@ def example():
     #
     # axes of the 'testing_zarr_path' are: 't', 'c', 'z', 'y', 'x'; and just one channel ('c')
     list_of_coords_for_non_tzyx_dims = [0] # to choose the channel
-    segment_and_track_wrapper(testing_zarr_path, list_of_coords_for_non_tzyx_dims, tracking_options)
+    segment_and_track_wrapper(testing_zarr_path,0, list_of_coords_for_non_tzyx_dims, tracking_options)
 
