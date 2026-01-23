@@ -13,12 +13,19 @@
 
 import numpy as np
 
-device = 'cpu'
+default_tracking_options = {
+    'downscale_factor_x' : 1.0,
+    'downscale_factor_y' : 1.0,
+    'downscale_factor_z' : 1.0,
+    'start_from_tp'      : 0,
+    'end_at_tp'          : -1,
 
-i = nz.from_ngff_zarr('https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0051/180712_H2B_22ss_Courtney1_20180712-163837_p00_c00_preview.zarr/0')
-len(i.images)
-i.images[1].data.shape
-i.images[1].data[10,0,100]
+    # future extension -- currently not used in the code
+    'use_gpu'            : False,
+    'segmentation_model' : 'cyto3',
+    'tracking_model'     : 'ctc'
+}
+
 
 
 def flag_error_and_quit(error_msg):
