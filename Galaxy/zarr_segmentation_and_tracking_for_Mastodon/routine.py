@@ -133,3 +133,29 @@ def segmentation_and_tracking(view_into_data, tracking_options = default_trackin
     # consuider also tracking_options.start_from_tp to offset the 0-based time coordinate of the 'view_into_data'
 
 
+def segment_and_track_wrapper(zarr_path: str, list_of_coords_for_non_tzyx_dims: list[int], tracking_options = default_tracking_options):
+    """
+    Check the 'default_tracking_options' dictionary to see what all keys are supported.
+    It is worthwhile to downscale in x,y,z if the input images are 500+ pixels per dimension.
+    """
+    data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, list_of_coords_for_non_tzyx_dims)
+    # NB: now the data_view is guaranteed to be order as: tzyx
+    #     and it is truly an unmodified view, not scaled, not trimmed
+    #
+    segmentation_and_tracking(data_view, tracking_options)
+
+
+def example():
+    testing_zarr_path = 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0051/180712_H2B_22ss_Courtney1_20180712-163837_p00_c00_preview.zarr/0'
+    #
+    tracking_options = default_tracking_options.copy()
+    tracking_options['downscale_factor_x'] = 2.0
+    tracking_options['downscale_factor_y'] = 2.0
+    tracking_options['downscale_factor_z'] = 1.5
+    tracking_options['start_from_tp'] = 0
+    tracking_options['end_at_tp'] = 5
+    #
+    # axes of the 'testing_zarr_path' are: 't', 'c', 'z', 'y', 'x'; and just one channel ('c')
+    list_of_coords_for_non_tzyx_dims = [0] # to choose the channel
+    segment_and_track_wrapper(testing_zarr_path, list_of_coords_for_non_tzyx_dims, tracking_options)
+
