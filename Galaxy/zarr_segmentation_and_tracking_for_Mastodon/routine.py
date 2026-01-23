@@ -73,27 +73,43 @@ def obtain_lazy_view_from_the_zarr_path(input_path, image_idx, list_of_coords_fo
     return view
 
 
-def segmentation_and_tracking(view_into_data)
+def segmentation_and_tracking(view_into_data, tracking_options = default_tracking_options):
     """
     Input (`view_into_data`) must be t,z,y,x even for 2D+t images.
     Output is that of Trackastra.
+
+    Check the 'default_tracking_options' dictionary to see what all keys are supported.
     """
     from cellpose import models as cp3_models
     from trackastra.model import Trackastra
-    seg_model = cp3_models.CellposeModel(model_type='cyto3')
-    tra_model = Trackastra.from_pretrained('ctc', device=device)
+    from skimage.transform import resize
+    from math import ceil
+
+    seg_model = cp3_models.CellposeModel(model_type='cyto3') # TODO use default_tracking_options.segmentation_model
+    tra_model = Trackastra.from_pretrained('ctc')
 
     # just FYI
     do_3D = view_into_data.shape[1] > 1
     print(f"seg and tra models initiated, going to do 3D: {do_3D}")
 
-    # TODO: downscale the view in zyx axes
-    # TODO: 'all_masks' will be in the new downscaled size
+    # figure out the (possibly) downscaled spatial size (zyx axes)
+    down_scale_factors = [ \
+        tracking_options.get('downscale_factor_z',1), \
+        tracking_options.get('downscale_factor_y',1), \
+        tracking_options.get('downscale_factor_x',1) ]
+    new_spatial_size = [ ceil(size/scale) for size,scale in zip(view_into_data[0].shape, down_scale_factors) ]
 
-    all_masks = np.zeros(view_into_data.shape, dtype='uint16')
+    # trim (along the time axis) the input data
+    t_from = tracking_options.get('start_from_tp', 0)
+    t_to = tracking_options.get('end_at_tp', -2) +1  # 'end_at_tp' is inclusive bound, 't_to' is exclusive, hence +1
+    if t_to == -1: t_to = view_into_data.shape[0]
+    view_into_data = view_into_data[t_from:t_to]
+
+    # 'all_masks' will be in the new downscaled size, and the trimmed length!
+    all_masks = np.zeros((view_into_data.shape[0],*new_spatial_size), dtype='uint16')
 
     for t in range(view_into_data.shape[0]):
-        img = view_into_data[t]
+        img = np.array( resize(view_into_data[t], new_spatial_size, preserve_range=True) )
         masks,_,_ = seg_model.eval([img], channels=[0,0], do_3D=do_3D, normalize=True)
         print(f"done segmenting frame {t}, input image size was {img.shape}")
 
