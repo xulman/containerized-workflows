@@ -19,9 +19,6 @@ default_tracking_options = {
     'downscale_factor_z' : 1.0,
     'start_from_tp'      : 0,
     'end_at_tp'          : -1,
-
-    # future extension -- currently not used in the code
-    'use_gpu'            : False,
     'segmentation_model' : 'cyto3',
     'tracking_model'     : 'ctc'
 }
@@ -35,7 +32,7 @@ def flag_error_and_quit(error_msg):
 
 def obtain_lazy_view_from_the_zarr_path(input_path, scale_level, list_of_coords_for_non_tzyx_dims):
     """
-    scale_level = 0 means the finest/highest (spatial) resolution, the "bottom of a pyramid"
+    'scale_level' = 0 means the finest/highest (spatial) resolution, the "bottom of a pyramid"
     """
     import ngff_zarr as nz
     zarr_handle = nz.from_ngff_zarr(input_path)
@@ -109,9 +106,11 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
     if t_to == -1: t_to = view_into_raw_data.shape[0]
     view_into_raw_data = view_into_raw_data[t_from:t_to]
 
+    print("memory allocation for segmentation results started...")
     # 'all_masks' will be in the new downscaled size, and the trimmed length!
     all_masks = np.zeros((view_into_raw_data.shape[0],*new_spatial_size), dtype='uint16')
 
+    print("segmenting started...")
     for t in range(view_into_raw_data.shape[0]):
         img = np.array( resize(view_into_raw_data[t], new_spatial_size, preserve_range=True) )
         masks,_,_ = seg_model.eval([img], channels=[0,0], do_3D=do_3D, normalize=True)
@@ -120,6 +119,7 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
         # btw, it is possible to re-use the memory into which the original zarr data landed
         #img[:] = masks[0,:]
         all_masks[t] = masks[0]
+    print("segmenting done")
 
     return all_masks, view_into_raw_data
 
