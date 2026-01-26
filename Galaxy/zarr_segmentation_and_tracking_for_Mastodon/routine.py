@@ -134,6 +134,7 @@ def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_o
     Check the 'default_tracking_options' dictionary to see what all keys are supported.
     """
     from trackastra.model import Trackastra
+    from trackastra.tracking import graph_to_napari_tracks
 
     m2 = tracking_options.get('tracking_model','ctc')
     tra_model = Trackastra.from_pretrained(m2)
@@ -142,15 +143,9 @@ def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_o
     track_graph = tra_model.track(view_into_raw_data, seg_data, mode="greedy")  # or mode="ilp", or "greedy_nodiv"
     print("tracking done")
 
-    # Write to cell tracking challenge format
-    # ctc_tracks, masks_tracked = graph_to_ctc(track_graph, all_masks, outdir=".")
-    # nope^^^^, produces difficult (and heavy) output
-    #
-    # other options? CSV for Mastodon, GEFF that is natively supported with Trackastra's API
-    # let's go for the CSV for Mastodon, it's pretty easy
-
     # TODO: upscale the coordinates in zyx axes
     # consuider also tracking_options.start_from_tp to offset the 0-based time coordinate of the 'view_into_data'
+    return track_graph, graph_to_napari_tracks(track_graph)
 
 
 def segment_and_track_wrapper(zarr_path: str, scale_level: int, list_of_coords_for_non_tzyx_dims: list[int], tracking_options = default_tracking_options):
