@@ -183,6 +183,25 @@ def upscale_napari_tracks(ntracks, tracking_options = default_tracking_options):
     return ntracks
 
 
+def postprocess_and_save_tracking(t, tracking_options = default_tracking_options):
+    """
+    't' should be the touple that's returned from the tracking() function.
+    """
+    # just unpack
+    track_graph, ntracks = t
+
+    track_graph = upscale_trackastra_graph(track_graph, tracking_options)
+    ntracks = upscale_napari_tracks(ntracks, tracking_options)
+
+    import pickle
+    f = open("trackastra_trackgraph.pickle.dat","wb")
+    pickle.dump(track_graph, f)
+    f.close()
+
+    f = open("napari_tracks.pickle.dat","wb")
+    pickle.dump(ntracks, f)
+    f.close()
+
 
 def segment_and_track_entry(zarr_path: str, scale_level: int,
                             list_of_coords_for_non_tzyx_dims_to_reach_raw_channel: list[int],
@@ -196,7 +215,9 @@ def segment_and_track_entry(zarr_path: str, scale_level: int,
     #     and it is truly an unmodified view, not scaled, not trimmed
     #
     seg,raw = segmentation(raw_data_view, tracking_options)
-    tracking(raw,seg, tracking_options)
+    t = tracking(raw,seg, tracking_options)
+    #
+    postprocess_and_save_tracking(t, tracking_options)
 
 
 def track_entry(zarr_path: str, scale_level: int,
@@ -213,7 +234,9 @@ def track_entry(zarr_path: str, scale_level: int,
     # NB: now the data_view is guaranteed to be order as: tzyx
     #     and it is truly an unmodified view, not scaled, not trimmed
     #
-    tracking(raw_data_view,seg_data_view, tracking_options)
+    t = tracking(raw_data_view,seg_data_view, tracking_options)
+    #
+    postprocess_and_save_tracking(t, tracking_options)
 
 
 
