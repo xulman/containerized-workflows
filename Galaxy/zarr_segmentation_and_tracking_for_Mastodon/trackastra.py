@@ -148,6 +148,42 @@ def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_o
     return track_graph, graph_to_napari_tracks(track_graph)
 
 
+def upscale_trackastra_graph(track_graph, tracking_options = default_tracking_options):
+    down_scale_factors = [ \
+        tracking_options.get('downscale_factor_z',1), \
+        tracking_options.get('downscale_factor_y',1), \
+        tracking_options.get('downscale_factor_x',1) ]
+
+    nodes = track_graph.nodes()
+    d = nodes.data()
+    for idx in nodes.keys():
+        node = d[int(idx)]
+        orig_coords = node['coords']
+        new_coords = ( \
+            orig_coords[0] * down_scale_factors[0], \
+            orig_coords[1] * down_scale_factors[1], \
+            orig_coords[2] * down_scale_factors[2] )
+        node['coords'] = new_coords
+
+    return track_graph
+
+
+def upscale_napari_tracks(ntracks, tracking_options = default_tracking_options):
+    down_scale_factors = [ \
+        tracking_options.get('downscale_factor_z',1), \
+        tracking_options.get('downscale_factor_y',1), \
+        tracking_options.get('downscale_factor_x',1) ]
+
+    for i in range(len(ntracks[0])):
+        tracking_marker = ntracks[0][i]
+        tracking_marker[2] *= down_scale_factors[0]
+        tracking_marker[3] *= down_scale_factors[1]
+        tracking_marker[4] *= down_scale_factors[2]
+
+    return ntracks
+
+
+
 def segment_and_track_entry(zarr_path: str, scale_level: int,
                             list_of_coords_for_non_tzyx_dims_to_reach_raw_channel: list[int],
                             tracking_options = default_tracking_options):
