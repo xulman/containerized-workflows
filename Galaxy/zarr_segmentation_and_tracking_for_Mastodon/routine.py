@@ -76,10 +76,12 @@ def obtain_lazy_view_from_the_zarr_path(input_path, scale_level, list_of_coords_
     return view
 
 
-def segmentation_and_tracking(view_into_data, tracking_options = default_tracking_options):
+def segmentation(view_into_raw_data, tracking_options = default_tracking_options):
     """
-    Input (`view_into_data`) must be t,z,y,x even for 2D+t images.
-    Output is that of Trackastra.
+    Input ('view_into_raw_data') must be t,z,y,x even for 2D+t images.
+    Output is a (possibly very large!) numpy with segmentation masks,
+    and the corresponding (view into) into the 'view_into_raw_data'.
+    Both outputs are (down-)scaled (given 'tracking_options') already!
 
     Check the 'default_tracking_options' dictionary to see what all keys are supported.
     """
@@ -119,6 +121,19 @@ def segmentation_and_tracking(view_into_data, tracking_options = default_trackin
         # btw, it is possible to re-use the memory into which the original zarr data landed
         #img[:] = masks[0,:]
         all_masks[t] = masks[0]
+
+    return all_masks, view_into_raw_data
+
+
+def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_options):
+    """
+    Both inputs ('view_into_raw_data' and 'seg_data') must be t,z,y,x even for 2D+t images,
+    and of the same shapes.
+    Output is that of Trackastra, and napari tracks; both with possibly downscaled spatial
+    coordinates (depending on the 'tracking_options').
+
+    Check the 'default_tracking_options' dictionary to see what all keys are supported.
+    """
 
     # now the view_into_data contains the segmentation
     print("tracking started...")
