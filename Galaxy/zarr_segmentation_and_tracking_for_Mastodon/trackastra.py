@@ -102,9 +102,9 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
 
     # trim (along the time axis) the input data
     t_from = tracking_options.get('start_from_tp', 0)
-    t_to = tracking_options.get('end_at_tp', -2) +1  # 'end_at_tp' is inclusive bound, 't_to' is exclusive, hence +1
-    if t_to == -1: t_to = view_into_raw_data.shape[0]
-    view_into_raw_data = view_into_raw_data[t_from:t_to]
+    t_to = tracking_options.get('end_at_tp', -1)
+    if t_to == -1: t_to = view_into_raw_data.shape[0]-1
+    view_into_raw_data = view_into_raw_data[t_from:t_to+1]
 
     print("memory allocation for segmentation results started...")
     # 'all_masks' will be in the new downscaled size, and the trimmed length!
