@@ -99,6 +99,9 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
         tracking_options.get('downscale_factor_y',1), \
         tracking_options.get('downscale_factor_x',1) ]
     new_spatial_size = [ ceil(size/scale) for size,scale in zip(view_into_raw_data[0].shape, down_scale_factors) ]
+    #
+    do_scaling = min(down_scale_factors) != max(down_scale_factors) != 1
+    print(f"going to scale images: {do_scaling}")
 
     # trim (along the time axis) the input data
     t_from = tracking_options.get('start_from_tp', 0)
@@ -106,22 +109,27 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
     if t_to == -1: t_to = view_into_raw_data.shape[0]-1
     view_into_raw_data = view_into_raw_data[t_from:t_to+1]
 
-    print("memory allocation for segmentation results started...")
     # 'all_masks' will be in the new downscaled size, and the trimmed length!
-    all_masks = np.zeros((view_into_raw_data.shape[0],*new_spatial_size), dtype='uint16')
+    print("memory allocation for segmentation results started...")
+    all_masks = np.empty((view_into_raw_data.shape[0],*new_spatial_size), dtype='uint16')
+    #
+    print("memory allocation for raw images started...")
+    all_raws = np.empty((view_into_raw_data.shape[0],*new_spatial_size), dtype=view_into_raw_data.dtype)
 
     print("segmenting started...")
     for t in range(view_into_raw_data.shape[0]):
-        img = np.array( resize(view_into_raw_data[t], new_spatial_size, preserve_range=True) )
-        masks,_,_ = seg_model.eval([img], channels=[0,0], do_3D=do_3D, normalize=True)
+        img = np.array( resize(view_into_raw_data[t], new_spatial_size, preserve_range=True) ) if do_scaling \
+              else np.array(view_into_raw_data[t], dtype=view_into_raw_data.dtype)
+        masks,_,_ = seg_model.eval([img], channels=[0,0], z_axis=0, do_3D=do_3D, normalize=True)
         print(f"done segmenting frame {t}, input image size was {img.shape}")
 
         # btw, it is possible to re-use the memory into which the original zarr data landed
         #img[:] = masks[0,:]
         all_masks[t] = masks[0]
+        all_raws[t] = img
     print("segmenting done")
 
-    return all_masks, view_into_raw_data
+    return all_masks, all_raws
 
 
 def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_options):
