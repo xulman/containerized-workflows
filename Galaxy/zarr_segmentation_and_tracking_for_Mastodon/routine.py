@@ -148,16 +148,37 @@ def tracking(view_into_raw_data, seg_data, tracking_options = default_tracking_o
     return track_graph, graph_to_napari_tracks(track_graph)
 
 
-def segment_and_track_wrapper(zarr_path: str, scale_level: int, list_of_coords_for_non_tzyx_dims: list[int], tracking_options = default_tracking_options):
+def segment_and_track_entry(zarr_path: str, scale_level: int,
+                            list_of_coords_for_non_tzyx_dims_to_reach_raw_channel: list[int],
+                            tracking_options = default_tracking_options):
     """
     Check the 'default_tracking_options' dictionary to see what all keys are supported.
     It is worthwhile to downscale in x,y,z if the input images are 500+ pixels per dimension.
     """
-    data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, scale_level, list_of_coords_for_non_tzyx_dims)
+    raw_data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, scale_level, list_of_coords_for_non_tzyx_dims_to_reach_raw_channel)
     # NB: now the data_view is guaranteed to be order as: tzyx
     #     and it is truly an unmodified view, not scaled, not trimmed
     #
-    segmentation_and_tracking(data_view, tracking_options)
+    seg,raw = segmentation(raw_data_view, tracking_options)
+    tracking(raw,seg, tracking_options)
+
+
+def track_entry(zarr_path: str, scale_level: int,
+                list_of_coords_for_non_tzyx_dims_to_reach_raw_channel: list[int],
+                list_of_coords_for_non_tzyx_dims_to_reach_seg_channel: list[int],
+                tracking_options = default_tracking_options):
+    """
+    Check the 'default_tracking_options' dictionary to see what all keys are supported.
+    It is worthwhile to downscale in x,y,z if the input images are 500+ pixels per dimension
+    (yes, even for the tracking itself!).
+    """
+    raw_data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, scale_level, list_of_coords_for_non_tzyx_dims_to_reach_raw_channel)
+    seg_data_view = obtain_lazy_view_from_the_zarr_path(zarr_path, scale_level, list_of_coords_for_non_tzyx_dims_to_reach_seg_channel)
+    # NB: now the data_view is guaranteed to be order as: tzyx
+    #     and it is truly an unmodified view, not scaled, not trimmed
+    #
+    tracking(raw_data_view,seg_data_view, tracking_options)
+
 
 
 def example():
@@ -171,6 +192,6 @@ def example():
     tracking_options['end_at_tp'] = 5
     #
     # axes of the 'testing_zarr_path' are: 't', 'c', 'z', 'y', 'x'; and just one channel ('c')
-    list_of_coords_for_non_tzyx_dims = [0] # to choose the channel
-    segment_and_track_wrapper(testing_zarr_path,0, list_of_coords_for_non_tzyx_dims, tracking_options)
+    list_of_coords_for_non_tzyx_dims_to_reach_raw_channel = [0] # to choose the channel
+    segment_and_track_entry(testing_zarr_path,0, list_of_coords_for_non_tzyx_dims_to_reach_raw_channel, tracking_options)
 
