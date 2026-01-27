@@ -166,7 +166,7 @@ def resize(view_into_raw_data, view_into_seg_data, tracking_options = default_tr
               else np.array(view_into_raw_data[t], dtype=view_into_raw_data.dtype)
         all_masks[t] = np.array( resize(view_into_seg_data[t], new_spatial_size, preserve_range=True, order=0) ) if do_scaling \
               else np.array(view_into_seg_data[t], dtype=view_into_seg_data.dtype)
-        print(f"done resizing frame {t}, input image size was {all_raws[t].shape}")
+        print(f"done resizing frame {t}, target image size was {all_raws[t].shape} (source size was {view_into_raw_data[t].shape})")
     print("resizing done")
 
     return all_raws, all_masks
