@@ -101,7 +101,7 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
     new_spatial_size = [ ceil(size/scale) for size,scale in zip(view_into_raw_data[0].shape, down_scale_factors) ]
     #
     do_scaling = min(down_scale_factors) != max(down_scale_factors) != 1
-    print(f"going to scale images: {do_scaling}")
+    print(f"seg, going to scale images: {do_scaling}")
 
     # trim (along the time axis) the input data
     t_from = tracking_options.get('start_from_tp', 0)
@@ -129,7 +129,7 @@ def segmentation(view_into_raw_data, tracking_options = default_tracking_options
         all_raws[t] = img
     print("segmenting done")
 
-    return all_masks, all_raws
+    return all_raws, all_masks
 
 
 def resize(view_into_raw_data, view_into_seg_data, tracking_options = default_tracking_options):
@@ -262,7 +262,7 @@ def segment_and_track_entry(zarr_path: str, scale_level: int,
     # NB: now the data_view is guaranteed to be order as: tzyx
     #     and it is truly an unmodified view, not scaled, not trimmed
     #
-    seg,raw = segmentation(raw_data_view, tracking_options)
+    raw,seg = segmentation(raw_data_view, tracking_options)
     t = tracking(raw,seg, tracking_options)
     #
     postprocess_and_save_tracking(t, tracking_options)
